@@ -1,0 +1,35 @@
+name: build image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [Dockerfile, .github/workflows/build.yml]
+  schedule:
+    - cron: "0 3 * * 1"   # weekly: pick up new yolks base / Chrome
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: owner
+        run: echo "name=${GITHUB_REPOSITORY_OWNER@L}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          pull: true
+          tags: ghcr.io/${{ steps.owner.outputs.name }}/lampac-pelican:latest
